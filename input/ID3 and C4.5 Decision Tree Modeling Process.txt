@@ -1,0 +1,109 @@
+Lesson 8.3 ID3 and C4.5 Decision Tree Modeling Process
+ID3 and C4.5, as classic decision tree algorithms, cannot be modeled using sklearn, but their fundamental principles are still worth discussing and learning. Next, we will detail the basic ideas and principles of modeling for these two decision tree models, ID3 and C4.5. The basic modeling process of ID3 and C4.5 is similar to that of the CART tree, as both select the best dataset partitioning method based on purity evaluation metrics. However, ID3 and C4.5 use information entropy as the evaluation metric, and the partitioning method for discrete features in the dataset involves expanding one column at a time, rather than finding split points for partitioning. We will start by introducing the basic principles of ID3, followed by discussing the improvements made by C4.5 on the foundation of ID3.
+
+1. Basic Modeling Process of the ID3 Decision Tree
+ID3 is a decision tree model that can only classify problems using discrete variables. In other words, ID3 cannot handle continuous features or regression problems. If the training data contains continuous variables, they must first be discretized, i.e., continuous variable binning. For example, in the following personal consumption data, all features are discrete variables. It can be seen that the "age" and "income" columns are the results of binning continuous variables, where "age" is binned using 30 and 40 as boundaries. Of course, in addition to the representation below, we can also assign discrete values such as 1, 2, or 3 to the binned results.
+
+More methods for discretizing continuous variables will be introduced in the feature engineering section.
+
+The growth process of ID3 is essentially the same as that of the CART tree, with the goal of reducing dataset impurity as much as possible. The growth process is also a continuous partitioning of the dataset. However, the dataset partitioning process (rule extraction process) of ID3 differs from that of the CART tree. The CART tree searches for split points across all features and then selects the partitioning method that can most effectively reduce dataset impurity. In other words, the CART tree expands based on a split point, while ID3 expands based on columns, i.e., partitioning the dataset according to the different values of a column. For example, partitioning the original dataset based on the different values of the "age" column in the above dataset yields the following results:
+
+Similarly, we can calculate the reduction in overall dataset impurity after partitioning the dataset based on the different values of "age." ID3 uses information entropy as the evaluation metric, and the specific calculation process is as follows:
+
+First, calculate the information entropy of the parent node:
+# Information entropy of parent node A
+ent_A = -5/14 * np.log2(5/14) - 9/14 * np.log2(9/14)
+ent_A
+0.9402859586706311
+
+Then, calculate the information entropy of each child node:
+# Information entropy of child node B
+ent_B1 = entropy(2/5)
+ent_B2 = entropy(2/5)
+ent_B3 = 0
+ent_B1, ent_B2, ent_B3
+
+(0.9709505944546686, 0.9709505944546686, 0)
+
+The overall information entropy of the child nodes is the weighted sum of the information entropy of each child node, where the weights are the proportion of each child node's dataset size relative to the parent node's total dataset size:
+ent_B = ent_B1 * 5/14 + ent_B2 * 5/14 + ent_B3 * 4/14
+ent_B
+0.6935361388961919
+
+Next, the reduction in impurity after partitioning the dataset according to this rule can be calculated:
+# Reduction in impurity
+ent_A - ent_B
+0.24674981977443922
+
+This result is also known as the information gain after partitioning the dataset based on the "age" column. The above result can be written as:
+Gain(age) = 0.247
+
+Of course, so far, we have only calculated the reduction in dataset impurity after partitioning the dataset based on the different values of the "age" column. Expanding based on the "age" column is just one candidate partitioning rule in the first step of tree growth. We also need to test the reduction in impurity after expanding based on the "income," "student," or "credit_rating" columns. The specific calculation process is similar to that for the "age" column. Here, we directly provide the results: Gain(income)=0.026, Gain(student)=0.151, Gain(credit_rating)=0.048. Clearly, expanding based on the "age" column can more effectively reduce dataset impurity, so the first layer of the tree is partitioned according to the different values of the "age" column.
+
+Next, we need to continue iterating. By observation, it is easy to see that for dataset B1, expanding based on the "student" column can reduce the information entropy of the child nodes to zero. Similarly, for dataset B2, expanding based on the "credit_rating" column can also increase the label purity of the child nodes to 100%. Therefore, the final growth form of the tree is as follows:
+
+At this point, we have completed the entire modeling process of the ID3 decision tree. The interpretation of the model results is exactly the same as that for the CART tree and will not be repeated here. Next, we briefly compare the differences between ID3 and the CART tree:
+
+First, since ID3 extracts rules by expanding one column at a time, each step of growth can have multiple branches, determined by the number of classification levels in the current column. In contrast, the CART tree can only grow as a binary tree.
+
+Second, because ID3 expands one column at a time, it consumes columns very quickly during modeling. The number of features in the dataset determines the maximum depth of the tree. In comparison, the CART tree has many more candidate rules, allowing it to extract more refined rules.
+
+Of course, although the CART tree and ID3 differ at the fundamental theoretical level, sometimes the CART tree can uncover the same rules as the ID3 decision tree. For example, the three classification rules extracted by expanding the "age" column in one layer in ID3 can also be achieved in the CART tree through two layers: the first layer partitions based on whether the value is <=30, and the second layer further partitions the dataset that does not meet the first condition based on whether the value is >40.
+
+Additionally, it is important to note that because ID3 expands based on columns, it can only handle datasets where all features are discrete variables. Moreover, according to the modeling rules of ID3, the tree tends to prefer expanding columns with more classification levels during actual growth, which makes it more prone to overfitting. Unfortunately, ID3 does not have any measures to prevent overfitting. These shortcomings of ID3 are precisely the areas improved by the C4.5 algorithm. Next, we will discuss the modeling rules of the C4.5 decision tree.
+
+2. Basic Modeling Process of the C4.5 Decision Tree
+As an improved version of ID3, C4.5 optimizes ID3 in three aspects. First, it introduces the concept of information value (IV, also known as split information or branch degree) to adjust the calculation results of information entropy during the evaluation of impurity reduction. This helps suppress ID3's tendency to prefer columns with more classification levels for expansion, indirectly reducing the model's overfitting tendency.
+
+Second, C4.5 adds a method for handling continuous variables, which is the same as the CART tree's approach of using the midpoint of adjacent values as split points.
+
+Third, C4.5 incorporates a tree pruning process, further enhancing the model's generalization ability. However, it is important to note that despite these improvements, C4.5 can still only solve classification problems; it remains essentially a classification tree. Next, we will discuss the specific improvement strategies of C4.5 in detail.
+
+Information Value (IV)
+In C4.5, information value (referred to as IV) is an indicator used to measure the number of branches when partitioning a dataset. The more branches there are during partitioning, the higher the IV value. The specific formula for calculating IV is as follows:
+
+The IV calculation formula is essentially the same as the information entropy formula, except that the proportions used are no longer the proportions of different classes of samples but the proportions of data in each partitioned child node. In other words, information entropy measures the disorder of different label values, while IV measures the disorder of different feature values.
+
+Here, K represents the total number of branches in a partition, $v_i$ represents a sample after partitioning, and $P(v_i)$ represents the proportion of that sample's size relative to the parent node's total data size. For the following three dataset partitioning scenarios, the IV values are simply calculated:
+
+# Parent node partitioned 50%-50%
+- (1/2 * np.log2(1/2) + 1/2 * np.log2(1/2))
+1.0
+
+# Parent node partitioned 1/4-1/2-1/4
+- (1/4 * np.log2(1/4) + 1/2 * np.log2(1/2) + 1/4 * np.log2(1/4))
+1.5
+
+# Parent node partitioned 1/4-1/4-1/4-1/4
+- (1/4 * np.log2(1/4) + 1/4 * np.log2(1/4) + 1/4 * np.log2(1/4) + 1/4 * np.log2(1/4))
+2.0
+
+In actual modeling, ID3 selects partitioning rules based on the calculation results of information gain, while C4.5 uses IV to adjust the information gain calculation results, constructing a new dataset partitioning evaluation metric: the gain ratio (GR), to guide the selection of specific partitioning rules. The formula for GR is as follows:
+
+In other words, during the modeling process of C4.5, GR must first be calculated, and then the column with the larger GR result is selected for expansion. For example, in the above example, the information gain (IG) after expanding the "age" column is:
+IG = ent_A - ent_B
+IG
+0.24674981977443922
+
+The IV value is:
+IV = - (5/14 * np.log2(5/14) + 5/14 * np.log2(5/14) + 4/14 * np.log2(4/14))
+IV
+1.5774062828523454
+
+Thus, the GR value is calculated as:
+GR = IG / IV
+GR
+0.1564275624211752
+
+Next, the GR values for expanding other columns are calculated, and the column with the larger GR value is selected for dataset partitioning.
+
+Handling Continuous Variables in C4.5
+C4.5 allows the inclusion of continuous variables for modeling, and the rule extraction method for continuous variables is the same as that introduced earlier for the CART tree. That is, the midpoints of adjacent values in continuous variables are used as candidate split points, and the GR values after splitting are calculated to determine the final dataset partitioning method.
+
+Of course, the candidate splitting methods based on continuous variables must also be compared horizontally with the splitting methods for discrete variables. Whether to expand a discrete column once or split based on a certain point in a continuous variable depends on the final GR calculation results.
+
+For example, if the "age" column in the above dataset is replaced with a continuous variable, the GR scenarios to be calculated become GR(income), GR(student), GR(credit_rating), GR(age<=26.5), GR(age<=27.5), etc.
+
+Since the rule extraction methods for discrete and continuous variables in C4.5 differ—discrete variables consume one column at a time for expansion (potentially multi-branch), while continuous variables consume one split point at a time—the same continuous variable can guide dataset partitioning multiple times, just like in the CART tree.
+
+In the sklearn documentation on tree models, there is a note stating that sklearn's decision trees do not support modeling with discrete variables. This means that sklearn does not support expanding discrete variables directly by columns, as in ID3 or C4.5. Instead, the modeling rules integrated into sklearn's CART tree ensure that the decision tree actually processes features using the same method as C4.5's handling of continuous variables, not that discrete variables cannot be modeled at all.
